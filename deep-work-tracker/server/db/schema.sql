@@ -60,12 +60,13 @@ BEGIN
 
   SELECT id INTO demo_id FROM users WHERE email = 'demo@demo.com';
 
+  -- colors validated for both light and dark chart surfaces (CVD-safe set)
   INSERT INTO tags (user_id, name, color) VALUES
-    (demo_id, 'DSA',     '#ef4444'),
-    (demo_id, 'Web Dev', '#3b82f6'),
-    (demo_id, 'College', '#f59e0b'),
-    (demo_id, 'Reading', '#10b981')
-  ON CONFLICT (user_id, name) DO NOTHING;
+    (demo_id, 'DSA',     '#e34948'),
+    (demo_id, 'Web Dev', '#2a78d6'),
+    (demo_id, 'College', '#c98500'),
+    (demo_id, 'Reading', '#059669')
+  ON CONFLICT (user_id, name) DO UPDATE SET color = EXCLUDED.color;
 
   SELECT array_agg(id) INTO tag_ids FROM tags WHERE user_id = demo_id;
 

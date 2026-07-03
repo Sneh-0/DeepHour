@@ -1,0 +1,606 @@
+/* ------------------------------------------------------------------ */
+/* Design tokens (light + dark). Chart hues come from the validated    */
+/* reference palette; text always wears ink tokens, never series color */
+/* ------------------------------------------------------------------ */
+:root {
+  --bg: #f9f9f7;
+  --surface: #fcfcfb;
+  --text: #0b0b0b;
+  --text-2: #52514e;
+  --muted: #898781;
+  --border: rgba(11, 11, 11, 0.1);
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --hover-wash: rgba(11, 11, 11, 0.05);
+
+  --accent: #059669;
+  --accent-strong: #047857;
+  --danger: #d03b3b;
+  --chart-accent: #059669;
+
+  /* sequential emerald steps for the heatmap (light mode: light -> dark) */
+  --hm-empty: #eceae4;
+  --hm-1: #d1fae5;
+  --hm-2: #6ee7b7;
+  --hm-3: #10b981;
+  --hm-4: #047857;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d0d0d;
+    --surface: #1a1a19;
+    --text: #ffffff;
+    --text-2: #c3c2b7;
+    --muted: #898781;
+    --border: rgba(255, 255, 255, 0.1);
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --hover-wash: rgba(255, 255, 255, 0.06);
+
+    --accent: #10b981;
+    --accent-strong: #34d399;
+    --danger: #e66767;
+    --chart-accent: #10b981;
+
+    /* dark mode: near-zero recedes toward the dark surface */
+    --hm-empty: #262624;
+    --hm-1: #065f46;
+    --hm-2: #047857;
+    --hm-3: #10b981;
+    --hm-4: #6ee7b7;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Base                                                                */
+/* ------------------------------------------------------------------ */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  line-height: 1.5;
+}
+
+h1 {
+  font-size: 1.5rem;
+  margin: 0 0 1rem;
+}
+
+h2 {
+  font-size: 1rem;
+  margin: 0 0 0.75rem;
+}
+
+a {
+  color: var(--accent);
+}
+
+.text-muted {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* Layout                                                              */
+/* ------------------------------------------------------------------ */
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+}
+
+.navbar {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.navbar-brand {
+  font-weight: 700;
+}
+
+.navbar-links {
+  display: flex;
+  gap: 1rem;
+  flex: 1;
+}
+
+.navbar-links a {
+  color: var(--text-2);
+  text-decoration: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+}
+
+.navbar-links a:hover {
+  background: var(--hover-wash);
+}
+
+.navbar-links a.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.navbar-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.navbar-name {
+  color: var(--text-2);
+  font-size: 0.875rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dash-grid,
+.analytics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 720px) {
+  .dash-grid,
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Forms & buttons                                                     */
+/* ------------------------------------------------------------------ */
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--text-2);
+  margin-bottom: 0.75rem;
+  flex: 1;
+}
+
+input,
+select {
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+input:focus,
+select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+input[type='color'] {
+  padding: 0;
+  width: 42px;
+  height: 38px;
+  border-radius: 8px;
+  cursor: pointer;
+  flex: none;
+}
+
+.btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+}
+
+.btn-ghost {
+  border-color: var(--border);
+  color: var(--text-2);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--hover-wash);
+}
+
+.btn-sm {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+}
+
+.btn-danger-text {
+  color: var(--danger);
+}
+
+.alert {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+}
+
+.info-banner {
+  font-size: 0.9rem;
+  color: var(--text-2);
+  border-left: 3px solid var(--accent);
+}
+
+.form-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* Auth pages                                                          */
+/* ------------------------------------------------------------------ */
+.auth-wrap {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+}
+
+.auth-card h1 {
+  margin-bottom: 0.25rem;
+}
+
+.auth-card .text-muted {
+  margin: 0 0 1rem;
+}
+
+.auth-switch {
+  text-align: center;
+  margin: 1rem 0 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Timer                                                               */
+/* ------------------------------------------------------------------ */
+.timer {
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+.timer-clock {
+  font-size: 3rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-running {
+  color: var(--accent);
+}
+
+.timer-save-row {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.timer-save-row select,
+.timer-save-row input {
+  flex: 1;
+}
+
+.timer-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+/* ------------------------------------------------------------------ */
+/* Sessions & tags                                                     */
+/* ------------------------------------------------------------------ */
+.session-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.session-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.session-row:last-child {
+  border-bottom: none;
+}
+
+.session-row-editing {
+  display: block;
+}
+
+.session-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.session-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.session-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-actions {
+  display: flex;
+  gap: 0.25rem;
+  flex: none;
+}
+
+.tag-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+  display: inline-block;
+}
+
+.tag-dot-lg {
+  width: 16px;
+  height: 16px;
+}
+
+.tag-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.tag-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.tag-row:last-child {
+  border-bottom: none;
+}
+
+.tag-row input:not([type='color']) {
+  flex: 1;
+}
+
+.tag-name {
+  flex: 1;
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------ */
+/* Analytics                                                           */
+/* ------------------------------------------------------------------ */
+.streak-tiles {
+  display: flex;
+  gap: 1rem;
+}
+
+.stat-tile {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.25rem 0.5rem;
+}
+
+.stat-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+.donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.donut-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.donut-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.donut-legend-name {
+  flex: 1;
+}
+
+.chip {
+  display: inline-block;
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.chip-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.best-hours-chips {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.chart-tooltip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.8rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.chart-tooltip-label {
+  color: var(--muted);
+  margin-bottom: 0.15rem;
+}
+
+.chart-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------ */
+/* Heatmap (sequential blue, one hue light->dark; dark mode selected)  */
+/* ------------------------------------------------------------------ */
+.heatmap-wrap {
+  overflow-x: auto;
+}
+
+.react-calendar-heatmap {
+  min-width: 640px;
+}
+
+.react-calendar-heatmap text {
+  fill: var(--muted);
+  font-size: 8px;
+}
+
+.react-calendar-heatmap rect {
+  rx: 2;
+}
+
+.react-calendar-heatmap .hm-empty {
+  fill: var(--hm-empty);
+}
+
+.react-calendar-heatmap .hm-1 {
+  fill: var(--hm-1);
+}
+
+.react-calendar-heatmap .hm-2 {
+  fill: var(--hm-2);
+}
+
+.react-calendar-heatmap .hm-3 {
+  fill: var(--hm-3);
+}
+
+.react-calendar-heatmap .hm-4 {
+  fill: var(--hm-4);
+}
+
+.heatmap-scale {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+.hm-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.hm-swatch.hm-empty {
+  background: var(--hm-empty);
+}
+
+.hm-swatch.hm-1 {
+  background: var(--hm-1);
+}
+
+.hm-swatch.hm-2 {
+  background: var(--hm-2);
+}
+
+.hm-swatch.hm-3 {
+  background: var(--hm-3);
+}
+
+.hm-swatch.hm-4 {
+  background: var(--hm-4);
+}

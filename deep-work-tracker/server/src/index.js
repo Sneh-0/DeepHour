@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import tagRoutes from './routes/tags.js';
 import sessionRoutes from './routes/sessions.js';
+import analyticsRoutes from './routes/analytics.js';
+import insightsRoutes from './routes/insights.js';
 import { requireAuth } from './middleware/auth.js';
 
 dotenv.config();
@@ -38,6 +40,8 @@ app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/tags', requireAuth, tagRoutes);
 app.use('/api/sessions', requireAuth, sessionRoutes);
+app.use('/api/analytics', requireAuth, analyticsRoutes);
+app.use('/api/insights', requireAuth, insightsRoutes);
 
 // Example protected route — proves the JWT middleware works end to end
 app.get('/api/me', requireAuth, (req, res) => {

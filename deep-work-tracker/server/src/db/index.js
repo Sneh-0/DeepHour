@@ -5,6 +5,13 @@ dotenv.config();
 
 const { Pool } = pg;
 
+// Return SQL DATE columns as plain 'YYYY-MM-DD' strings instead of JS Date
+// objects. A DATE has no time or timezone; letting pg promote it to a Date
+// object shifts it by the server's timezone and serializes as a misleading
+// timestamp (e.g. '2026-06-26T18:30:00.000Z' for 2026-06-27 in IST).
+// 1082 is Postgres's internal OID for the DATE type.
+pg.types.setTypeParser(1082, (value) => value);
+
 const common = {
   max: 10,
   idleTimeoutMillis: 30_000,

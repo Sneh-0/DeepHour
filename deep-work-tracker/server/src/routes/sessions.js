@@ -14,6 +14,12 @@ function isValidDate(value) {
   return typeof value === 'string' && !Number.isNaN(Date.parse(value));
 }
 
+// You can't have focused in the future. 2-minute grace absorbs clock skew.
+const FUTURE_GRACE_MS = 2 * 60 * 1000;
+function isFuture(value) {
+  return Date.parse(value) > Date.now() + FUTURE_GRACE_MS;
+}
+
 function isValidDuration(value) {
   return Number.isInteger(value) && value > 0 && value <= MAX_DURATION;
 }
@@ -77,6 +83,9 @@ router.post('/', async (req, res, next) => {
     if (!isValidDate(started_at)) {
       return res.status(400).json({ error: '`started_at` must be a valid date string' });
     }
+    if (isFuture(started_at)) {
+      return res.status(400).json({ error: '`started_at` cannot be in the future' });
+    }
     if (!isValidDuration(duration_minutes)) {
       return res
         .status(400)
@@ -117,6 +126,9 @@ router.put('/:id', async (req, res, next) => {
     if ('started_at' in body) {
       if (!isValidDate(body.started_at)) {
         return res.status(400).json({ error: '`started_at` must be a valid date string' });
+      }
+      if (isFuture(body.started_at)) {
+        return res.status(400).json({ error: '`started_at` cannot be in the future' });
       }
       params.push(body.started_at);
       sets.push(`started_at = $${params.length}`);
