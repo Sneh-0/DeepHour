@@ -10,6 +10,22 @@ load_dotenv()
 
 app = Flask(__name__)
 
+# When deployed, the ML service has a public URL but no user auth. Setting
+# ML_SHARED_SECRET (same value on the API) requires callers to present it,
+# so only our Express server can reach /predict. Unset in local dev = open.
+ML_SHARED_SECRET = os.environ.get("ML_SHARED_SECRET")
+
+
+@app.before_request
+def require_shared_secret():
+    # Health/root probes stay open so the host's uptime checks don't need the
+    # secret; everything else must match when a secret is configured.
+    if not ML_SHARED_SECRET or request.path in ("/", "/health"):
+        return None
+    if request.headers.get("X-ML-Secret") != ML_SHARED_SECRET:
+        return jsonify({"error": "Unauthorized"}), 401
+    return None
+
 
 @app.get("/")
 def hello():

@@ -4,6 +4,7 @@ import { query } from '../db/index.js';
 const router = Router();
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:5001';
+const ML_SHARED_SECRET = process.env.ML_SHARED_SECRET; // must match the Flask service in prod
 const MIN_SESSIONS = 10; // below this the model would just memorize noise
 const ML_TIMEOUT_MS = 5_000;
 
@@ -34,7 +35,10 @@ router.get('/best-hours', async (req, res, next) => {
     try {
       mlResponse = await fetch(`${ML_SERVICE_URL}/predict`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(ML_SHARED_SECRET ? { 'X-ML-Secret': ML_SHARED_SECRET } : {}),
+        },
         body: JSON.stringify({ sessions }),
         signal: AbortSignal.timeout(ML_TIMEOUT_MS),
       });

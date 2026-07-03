@@ -14,9 +14,11 @@ export function getAuthToken() {
   return authToken;
 }
 
-// '/api' is proxied to the Express server by Vite (see vite.config.js),
-// so the browser talks same-origin and CORS never enters the picture in dev.
-const api = axios.create({ baseURL: '/api' });
+// In dev, baseURL is '/api' — Vite proxies it to the Express server, so the
+// browser talks same-origin and CORS never enters the picture. In production
+// there is no proxy: set VITE_API_URL to the deployed API origin + '/api'
+// (e.g. https://dwt-api.onrender.com/api) at build time.
+const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api' });
 
 api.interceptors.request.use((config) => {
   if (authToken) config.headers.Authorization = `Bearer ${authToken}`;
