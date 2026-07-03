@@ -1,131 +1,179 @@
-# Deep-Work Tracker
+<div align="center">
 
-A full-stack productivity app for logging timed deep-work sessions, tagging them by activity, and visualizing where your focus actually goes — weekly totals, a GitHub-style yearly heatmap, current/longest streaks, and an ML-predicted "your best focus hours" insight learned from your own session history.
+# 🎯 Deep-Work Tracker
 
-## Architecture
+**Log timed focus sessions, tag them, and see where your attention actually goes** — weekly totals, a year-long contribution heatmap, focus streaks, and an ML model that learns *your* most productive hours.
+
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=nodedotjs&logoColor=white)
+![Express](https://img.shields.io/badge/Express-4-000000?logo=express&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-raw%20SQL-4169E1?logo=postgresql&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-3-000000?logo=flask&logoColor=white)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-DecisionTree-F7931E?logo=scikitlearn&logoColor=white)
+![JWT](https://img.shields.io/badge/Auth-JWT%20%2B%20bcrypt-FB015B?logo=jsonwebtokens&logoColor=white)
+
+🔗 **[Live Demo](https://deep-hour-nu.vercel.app/)** &nbsp;·&nbsp; 🧑‍💻 Try it with the demo account → `demo@demo.com` / `demo1234`
+
+</div>
+
+---
+
+## 📸 Screenshots
+
+| Dashboard — live timer + recent sessions | Analytics — weekly chart, tag donut, streaks |
+|:---:|:---:|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Analytics](docs/screenshots/analytics.png) |
+| **Year heatmap** — GitHub-style contribution grid 
+| ![Heatmap](docs/screenshots/heatmap.png) 
+
+---
+
+## 🏗️ Architecture
+
+Three independent services + a managed Postgres. The browser only ever talks to the API; the API is the only thing that talks to the ML service.
 
 ```
-┌──────────────────┐        ┌───────────────────┐        ┌──────────────────┐
-│   React (Vite)   │  /api  │  Express API      │  SQL   │   PostgreSQL     │
-│   localhost:5173 ├───────►│  localhost:4000   ├───────►│   (Supabase)     │
-│                  │  proxy │                   │  (pg)  │                  │
-│  axios + JWT     │        │  auth · tags      │        │  users · tags    │
-│  Recharts        │        │  sessions         │        │  sessions        │
-│  calendar-heatmap│        │  analytics        │        └──────────────────┘
-└──────────────────┘        │  insights ────────┼──────────────┐
-                            └───────────────────┘              │ POST /predict
-                                                               ▼
-                                                    ┌──────────────────────┐
-                                                    │  Flask ML service    │
-                                                    │  localhost:5001      │
-                                                    │  DecisionTreeRegr.   │
-                                                    └──────────────────────┘
+┌──────────────────┐   HTTPS   ┌───────────────────┐    SQL     ┌──────────────────┐
+│   React (Vite)   │   /api    │   Express API     │  (pg pool) │   PostgreSQL     │
+│                  ├──────────►│                   ├───────────►│   (Supabase)     │
+│  axios · JWT     │  axios    │  auth · tags      │  parameter-│                  │
+│  Recharts        │           │  sessions         │  ized SQL  │  users · tags    │
+│  calendar-heatmap│           │  analytics        │            │  sessions        │
+└──────────────────┘           │  insights ───┐    │            └──────────────────┘
+                               └──────────────┼────┘
+                                     POST /predict │  (X-ML-Secret)
+                                                   ▼
+                                        ┌──────────────────────┐
+                                        │   Flask ML service   │
+                                        │  DecisionTreeRegressor│
+                                        │  trained per-request  │
+                                        └──────────────────────┘
 ```
 
-### Why two services?
+**Why a separate ML service?** Three reasons I can defend in an interview: **language fit** (scikit-learn is the right tool, and it's Python), **failure isolation** (the predictor is optional — if Flask is down, `/insights` returns `{ available: false }` instead of taking session logging down with it), and **independent evolution** (retrain or scale the model without redeploying the core API).
 
-The ML predictor lives in its own Flask microservice instead of inside Express for three practical reasons: **(1) language fit** — scikit-learn is the natural tool for the model, and Python is where ML iteration happens; **(2) failure isolation** — the predictor is a nice-to-have, so the API treats it as optional: if Flask is down, `/api/insights/best-hours` degrades to a friendly `{ available: false }` instead of taking session logging down with it; **(3) independent evolution** — the model can be retrained, swapped, or scaled without touching (or redeploying) the core API. The Express server is the only thing that talks to Flask; the browser never does.
+---
 
-## Setup
+## 💡 Engineering highlights
 
-Prerequisites: Node 18+, Python 3.10+, a PostgreSQL database (a free [Supabase](https://supabase.com) project works out of the box).
+The parts I'd walk an interviewer through:
 
-### 1. Database (schema + demo seed in one file)
+- **🔒 Multi-tenant security by construction.** Every data query is scoped `WHERE user_id = $n` from the JWT — there is no code path that returns another user's row. Cross-user reads/writes return `404`, never a leak. Proven by 5 dedicated isolation tests in the smoke suite.
+- **🧠 Streak detection in pure SQL.** Current/longest streaks use the *islands-and-gaps* window-function trick (`date − ROW_NUMBER()` groups consecutive days). No app-side date looping — the database does it in one query. ([analytics.js](server/src/routes/analytics.js) has a step-by-step comment block.)
+- **📊 Gap-free time series.** Weekly totals use `generate_series` + `LEFT JOIN` so days with zero sessions still appear — including the subtle reason `user_id` must live in the `JOIN` condition, not the `WHERE` (or the outer join silently collapses to an inner one).
+- **🌐 Graceful degradation across a service boundary.** The API calls Flask with a 5s timeout and a shared-secret header; *any* failure (down, slow, error) maps to a calm `{ available: false, reason }` — the UI shows a friendly message, nothing crashes.
+- **🕐 Timezone-correct by design.** Sessions store naive local wall-clock time, and a custom `pg` type parser stops Postgres from silently shifting `DATE`/`TIMESTAMP` values to UTC — so "9 AM" stays 9 AM in the analytics and the ML features.
+- **♿ Accessibility-validated charts.** The categorical palette is colorblind-safe (validated for both light **and** dark surfaces with a ΔE script), single-hue sequential ramps for the heatmap, and identity never conveyed by color alone.
+- **✅ One-command end-to-end test.** [`smoke-test.mjs`](smoke-test.mjs) runs **35 checks** across auth, CRUD, filters, security isolation, analytics, and the ML path — the safety net behind every change.
 
-Run [`server/db/schema.sql`](server/db/schema.sql) against your database — it creates the tables **and** seeds a demo account with ~90 days of data. Easiest: paste the whole file into the Supabase **SQL Editor** and Run. Re-running is safe (idempotent; demo sessions are regenerated).
+**Also:** raw parameterized SQL (no ORM, no injection surface), bcrypt password hashing, consistent `{ error }` responses with meaningful status codes, and loading/error/empty states on every screen.
 
-> Demo login: `demo@demo.com` / `demo1234`
+---
 
-### 2. Express API
+## 🧩 Tech stack
+
+| Layer | Choice | Notes |
+|---|---|---|
+| **Frontend** | React 18 + Vite, React Router, axios | Recharts (bar/donut), react-calendar-heatmap, plain CSS with light/dark tokens |
+| **API** | Node + Express | JWT auth (jsonwebtoken + bcrypt), `pg` connection pool |
+| **Database** | PostgreSQL | Raw parameterized SQL, no ORM · hosted on Supabase |
+| **ML service** | Python + Flask | scikit-learn `DecisionTreeRegressor`, trained per request |
+
+---
+
+## 🚀 Quick start
+
+**Prerequisites:** Node 18+, Python 3.10+, and a Postgres database (a free [Supabase](https://supabase.com) project works out of the box).
+
+**1. Database** — run [`server/db/schema.sql`](server/db/schema.sql) against your DB (paste into the Supabase **SQL Editor** → Run). It creates the tables **and** seeds a demo account with ~90 days of realistic data. Re-running is safe.
+
+> 🔑 Demo login: **`demo@demo.com`** / **`demo1234`**
+
+<details>
+<summary><b>2. Run all three services</b> (click to expand)</summary>
 
 ```bash
+# API  → http://localhost:4000
 cd server
 npm install
-cp .env.example .env    # then edit .env:
-#   DATABASE_URL  → your Postgres connection string (URL-encode special chars in the password)
-#   JWT_SECRET    → any long random string
-npm start               # → http://localhost:4000
-```
+cp .env.example .env         # add DATABASE_URL + JWT_SECRET
+npm start
 
-### 3. ML service
-
-```bash
+# ML service  → http://localhost:5001
 cd ml-service
 python -m venv .venv
-.venv\Scripts\pip install -r requirements.txt     # Windows
-# .venv/bin/pip install -r requirements.txt       # macOS/Linux
-.venv\Scripts\python app.py                       # → http://localhost:5001
-```
+.venv\Scripts\pip install -r requirements.txt      # Windows
+# .venv/bin/pip install -r requirements.txt        # macOS/Linux
+.venv\Scripts\python app.py
 
-### 4. Client
-
-```bash
+# Client  → http://localhost:5173
 cd client
 npm install
-npm run dev             # → http://localhost:5173
+npm run dev
 ```
 
-**Or all three at once (Windows):** `.\dev.ps1` from the repo root opens each service in its own terminal window.
+**Windows shortcut:** `.\dev.ps1` from the repo root launches all three in separate windows.
 
-**Sanity check:** with the API + ML service running, `node smoke-test.mjs` from the repo root runs 35 end-to-end checks against every endpoint.
+**Verify:** with the API + ML service up, `node smoke-test.mjs` runs 35 end-to-end checks.
 
-## API
+</details>
 
-All routes are prefixed with `/api`. 🔒 = requires `Authorization: Bearer <JWT>`.
+---
 
-| Method | Endpoint | What it does |
+## 📡 API reference
+
+All routes are prefixed `/api`. 🔒 = requires `Authorization: Bearer <JWT>`.
+
+| Method | Endpoint | Description |
 |---|---|---|
-| POST | `/auth/signup` | Create account → `{ token, user }` (400 invalid, 409 duplicate email) |
-| POST | `/auth/login` | Log in → `{ token, user }` (401 bad credentials) |
-| GET 🔒 | `/tags` | List your tags |
-| POST 🔒 | `/tags` | Create tag `{ name, color? }` (409 duplicate name) |
-| PUT 🔒 | `/tags/:id` | Update name and/or color |
-| DELETE 🔒 | `/tags/:id` | Delete tag — its sessions survive with `tag_id = NULL` |
-| GET 🔒 | `/sessions` | List sessions; optional `?from=&to=&tag_id=` filters |
-| POST 🔒 | `/sessions` | Log `{ started_at, duration_minutes, tag_id?, note? }` (rejects 0/negative durations and future start times) |
-| PUT 🔒 | `/sessions/:id` | Partial update (any field; `tag_id`/`note` nullable) |
-| DELETE 🔒 | `/sessions/:id` | Delete session |
-| GET 🔒 | `/analytics/weekly` | Minutes per day, last 7 days, zero days included |
-| GET 🔒 | `/analytics/tags` | Total minutes per tag with name + color |
-| GET 🔒 | `/analytics/heatmap` | `{ date, minutes }` per active day, last 365 days |
-| GET 🔒 | `/analytics/streaks` | `{ current_streak, longest_streak }` (window-function trick) |
-| GET 🔒 | `/insights/best-hours` | ML prediction; `{ available: false, reason }` when <10 sessions or ML down |
-| GET | `/health` | Liveness check |
+| `POST` | `/auth/signup` | Create account → `{ token, user }` · `400` invalid, `409` duplicate email |
+| `POST` | `/auth/login` | Log in → `{ token, user }` · `401` bad credentials |
+| `GET` 🔒 | `/tags` | List your tags |
+| `POST` 🔒 | `/tags` | Create `{ name, color? }` · `409` duplicate name |
+| `PUT` 🔒 | `/tags/:id` | Update name and/or color |
+| `DELETE` 🔒 | `/tags/:id` | Delete — sessions survive with `tag_id = NULL` |
+| `GET` 🔒 | `/sessions` | List; optional `?from=&to=&tag_id=` filters |
+| `POST` 🔒 | `/sessions` | Log `{ started_at, duration_minutes, tag_id?, note? }` · rejects 0/negative & future times |
+| `PUT` 🔒 | `/sessions/:id` | Partial update (any field; `tag_id`/`note` nullable) |
+| `DELETE` 🔒 | `/sessions/:id` | Delete session |
+| `GET` 🔒 | `/analytics/weekly` | Minutes/day, last 7 days, zero days included |
+| `GET` 🔒 | `/analytics/tags` | Minutes per tag, with name + color |
+| `GET` 🔒 | `/analytics/heatmap` | `{ date, minutes }` per active day, last 365 |
+| `GET` 🔒 | `/analytics/streaks` | `{ current_streak, longest_streak }` |
+| `GET` 🔒 | `/insights/best-hours` | ML prediction; `{ available: false }` if <10 sessions or ML down |
 
-Errors are always `{ "error": "<human-readable message>" }` with a meaningful status code. Every data query is scoped to the JWT's user id — cross-user access returns 404, never another user's row.
+---
 
-## Screenshots
+## ☁️ Deployment
 
-<!-- Drop screenshots into docs/screenshots/ and update the paths -->
+Deploys cleanly to **Supabase** (DB) + **Render** ×2 (API & ML) + **Vercel** (client). Deploy order matters — each service's URL feeds the next.
 
-| | |
-|---|---|
-| ![Dashboard — timer and recent sessions](docs/screenshots/dashboard.png) | ![Analytics — weekly chart, donut, streaks](docs/screenshots/analytics.png) |
-| ![Yearly heatmap](docs/screenshots/heatmap.png) | ![Best focus hours prediction](docs/screenshots/best-hours.png) |
+| Service | Host | Start command | Key env vars |
+|---|---|---|---|
+| ML | Render | `gunicorn -b 0.0.0.0:$PORT app:app` | `ML_SHARED_SECRET` |
+| API | Render | `npm start` | `DATABASE_URL`, `JWT_SECRET`, `ML_SERVICE_URL`, `ML_SHARED_SECRET`, `CORS_ORIGIN` |
+| Client | Vercel | `npm run build` (Vite preset) | `VITE_API_URL` = API origin + `/api` |
 
-## Before deploying (notes to self)
+Generate secrets: `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`
 
-No deployment configs are included — deploy manually. Things that matter:
+> **Notes:** the ML service is protected by a shared-secret header (`X-ML-Secret`), so only the API can reach `/predict`. Render's free tier sleeps after 15 min idle — expect a ~30s cold start on the first request. Set `CORS_ORIGIN` to the exact Vercel origin (no trailing slash).
 
-**Environment variables**
+---
 
-| Service | Variable | Notes |
-|---|---|---|
-| server | `DATABASE_URL` | Supabase pooler URI; password must be URL-encoded |
-| server | `JWT_SECRET` | long random string — never the dev one; rotating it logs everyone out |
-| server | `PORT` | default 4000 |
-| server | `CORS_ORIGIN` | set to the deployed client origin (comma-separated list) |
-| server | `ML_SERVICE_URL` | internal URL of the Flask service |
-| ml-service | `PORT` | default 5001 |
+## ⚠️ Known limitations & next steps
 
-**Build/run commands**
+Honest scope boundaries (and what I'd build next):
 
-- Client: `npm run build` → static files in `client/dist/` (any static host). The dev `/api` proxy is Vite-only — either serve the client from the same origin as the API or set the API's `CORS_ORIGIN` and point axios at the full API URL.
-- Server: `npm start` (plain Node, no build step).
-- ML service: don't use `python app.py` in production (Flask debug server) — use a WSGI server, e.g. `waitress-serve --port 5001 app:app` (Windows) or `gunicorn -b 0.0.0.0:5001 app:app`.
+- **No token refresh / revocation** — JWTs expire after 7 days; add refresh tokens for a real deployment.
+- **Timer is in-memory** — a mid-session page reload loses the running clock; would persist to `localStorage`.
+- **No rate limiting** — add `express-rate-limit` on `/auth` before public exposure.
+- **Simple ML by design** — one decision tree per request; adjacent hours share predictions. A larger dataset would justify a richer model and a stored/versioned artifact.
+- **No pagination** — `/sessions` returns all rows (fine for personal scale, unbounded in theory).
 
-**Other**
+---
 
-- The Flask service has **no authentication** — it must never be exposed publicly; keep it on a private network reachable only by the API.
-- `db/index.js` uses `ssl: { rejectUnauthorized: false }` for the Supabase pooler — fine for dev; for production consider pinning Supabase's CA certificate.
-- The demo seed lives in `schema.sql`; skip or strip it for a production database, or leave it — it only touches the `demo@demo.com` account.
+<div align="center">
+<sub>Built as a full-stack portfolio project — React · Express · PostgreSQL · Flask · scikit-learn</sub>
+</div>
