@@ -1,8 +1,16 @@
 <div align="center">
 
-# 🎯 Deep-Work Tracker
+# DeepHour
 
 **Log timed focus sessions, tag them, and see where your attention actually goes** — weekly totals, a year-long contribution heatmap, focus streaks, and an ML model that learns *your* most productive hours.
+
+</div>
+
+---
+
+## 🏷️ Badges
+
+<div align="center">
 
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)
@@ -14,9 +22,34 @@
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-DecisionTree-F7931E?logo=scikitlearn&logoColor=white)
 ![JWT](https://img.shields.io/badge/Auth-JWT%20%2B%20bcrypt-FB015B?logo=jsonwebtokens&logoColor=white)
 
-🔗 **[Live Demo](https://deep-hour-nu.vercel.app/)** &nbsp;·&nbsp; 🧑‍💻 Try it with the demo account → `demo@demo.com` / `demo1234`
+</div>
+
+---
+
+## 🎬 Demo
+
+<div align="center">
+
+🔗 **[Live Demo](https://deep-hour-nu.vercel.app/)**
+
+🧑‍💻 Try it instantly with the demo account → **`demo@demo.com`** / **`demo1234`**
 
 </div>
+
+---
+
+## ✨ Features
+
+- **⏱️ Timed focus sessions** — start a live timer or log a session manually, then tag it (e.g. *Deep Work*, *Reading*, *Admin*).
+- **🏷️ Custom tags with colors** — create, rename, recolor, and delete tags; deleted tags leave their sessions intact.
+- **📊 Weekly analytics** — minutes/day bar chart for the last 7 days, with zero-days included so the trend never lies.
+- **🍩 Tag breakdown** — a donut chart of where your time actually goes, per tag.
+- **🔥 Focus streaks** — current and longest consecutive-day streaks, computed entirely in SQL.
+- **🟩 Year-long heatmap** — a GitHub-style contribution grid of your last 365 days.
+- **🧠 ML "best hours" insight** — a per-user model predicts *your* most productive hours from your own history.
+- **🔒 Multi-tenant auth** — JWT + bcrypt, with every query scoped to the logged-in user; no cross-user leaks.
+- **🌗 Light & dark themes** — accessible, colorblind-safe charts validated for both surfaces.
+- **✅ One-command smoke test** — 35 end-to-end checks covering auth, CRUD, filters, isolation, analytics, and the ML path.
 
 ---
 
@@ -25,12 +58,14 @@
 | Dashboard — live timer + recent sessions | Analytics — weekly chart, tag donut, streaks |
 |:---:|:---:|
 | ![Dashboard](docs/screenshots/dashboard.png) | ![Analytics](docs/screenshots/analytics.png) |
-| **Year heatmap** — GitHub-style contribution grid 
-| ![Heatmap](docs/screenshots/heatmap.png) 
+
+| Year heatmap — GitHub-style contribution grid |
+|:---:|
+| ![Heatmap](docs/screenshots/heatmap.png) |
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Architecture Diagram
 
 Three independent services + a managed Postgres. The browser only ever talks to the API; the API is the only thing that talks to the ML service.
 
@@ -54,9 +89,7 @@ Three independent services + a managed Postgres. The browser only ever talks to 
 
 **Why a separate ML service?** Three reasons I can defend in an interview: **language fit** (scikit-learn is the right tool, and it's Python), **failure isolation** (the predictor is optional — if Flask is down, `/insights` returns `{ available: false }` instead of taking session logging down with it), and **independent evolution** (retrain or scale the model without redeploying the core API).
 
----
-
-## 💡 Engineering highlights
+### 💡 Engineering highlights
 
 The parts I'd walk an interviewer through:
 
@@ -72,7 +105,7 @@ The parts I'd walk an interviewer through:
 
 ---
 
-## 🧩 Tech stack
+## 🧩 Tech Stack
 
 | Layer | Choice | Notes |
 |---|---|---|
@@ -83,7 +116,7 @@ The parts I'd walk an interviewer through:
 
 ---
 
-## 🚀 Quick start
+## 🚀 Installation
 
 **Prerequisites:** Node 18+, Python 3.10+, and a Postgres database (a free [Supabase](https://supabase.com) project works out of the box).
 
@@ -91,8 +124,7 @@ The parts I'd walk an interviewer through:
 
 > 🔑 Demo login: **`demo@demo.com`** / **`demo1234`**
 
-<details>
-<summary><b>2. Run all three services</b> (click to expand)</summary>
+**2. Run all three services:**
 
 ```bash
 # API  → http://localhost:4000
@@ -118,11 +150,19 @@ npm run dev
 
 **Verify:** with the API + ML service up, `node smoke-test.mjs` runs 35 end-to-end checks.
 
-</details>
-
 ---
 
-## 📡 API reference
+## 📖 Usage
+
+Once the three services are running (or via the [Live Demo](https://deep-hour-nu.vercel.app/)):
+
+1. **Sign up** or log in with the demo account (`demo@demo.com` / `demo1234`).
+2. **Create tags** on the Tags page — give each a name and color (e.g. *Deep Work*, *Reading*).
+3. **Log a session** on the Dashboard — start the live timer, or enter a start time + duration manually, then attach a tag and an optional note.
+4. **Explore Analytics** — the weekly bar chart, tag donut, streaks, and year heatmap update as you log more.
+5. **Check your best hours** — once you have ≥10 sessions, the ML "best hours" card predicts when you focus most effectively.
+
+### 📡 API reference
 
 All routes are prefixed `/api`. 🔒 = requires `Authorization: Bearer <JWT>`.
 
@@ -146,7 +186,52 @@ All routes are prefixed `/api`. 🔒 = requires `Authorization: Bearer <JWT>`.
 
 ---
 
-## ☁️ Deployment
+## 📂 Folder Structure
+
+```
+DeepHour/
+├── client/                  # React + Vite frontend
+│   └── src/
+│       ├── api/             # axios client
+│       ├── components/      # Navbar, Timer, SessionForm/List
+│       │   └── charts/      # WeeklyChart, TagDonut, HeatmapCard, BestHoursCard
+│       ├── context/         # AuthContext (JWT)
+│       ├── hooks/           # useFetch
+│       ├── pages/           # Dashboard, Analytics, Tags, Login, Signup
+│       └── utils/           # formatting helpers
+│
+├── server/                  # Node + Express API
+│   ├── db/
+│   │   └── schema.sql       # tables + demo seed data
+│   └── src/
+│       ├── db/              # pg pool + type parsers
+│       ├── middleware/      # JWT auth
+│       └── routes/          # auth, tags, sessions, analytics, insights
+│
+├── ml-service/              # Python + Flask ML service
+│   ├── app.py               # /predict endpoint
+│   ├── model.py             # DecisionTreeRegressor
+│   └── requirements.txt
+│
+├── docs/screenshots/        # README images
+├── dev.ps1                  # launch all three services (Windows)
+└── smoke-test.mjs           # 35-check end-to-end test suite
+```
+
+---
+
+## 🔮 Future Improvements
+
+Honest scope boundaries (and what I'd build next):
+
+- **No token refresh / revocation** — JWTs expire after 7 days; add refresh tokens for a real deployment.
+- **Timer is in-memory** — a mid-session page reload loses the running clock; would persist to `localStorage`.
+- **No rate limiting** — add `express-rate-limit` on `/auth` before public exposure.
+- **Simple ML by design** — one decision tree per request; adjacent hours share predictions. A larger dataset would justify a richer model and a stored/versioned artifact.
+- **No pagination** — `/sessions` returns all rows (fine for personal scale, unbounded in theory).
+
+<details>
+<summary><b>☁️ Deployment notes</b> (click to expand)</summary>
 
 Deploys cleanly to **Supabase** (DB) + **Render** ×2 (API & ML) + **Vercel** (client). Deploy order matters — each service's URL feeds the next.
 
@@ -160,17 +245,25 @@ Generate secrets: `node -e "console.log(require('crypto').randomBytes(48).toStri
 
 > **Notes:** the ML service is protected by a shared-secret header (`X-ML-Secret`), so only the API can reach `/predict`. Render's free tier sleeps after 15 min idle — expect a ~30s cold start on the first request. Set `CORS_ORIGIN` to the exact Vercel origin (no trailing slash).
 
+</details>
+
 ---
 
-## ⚠️ Known limitations & next steps
+## 👥 Contributors
 
-Honest scope boundaries (and what I'd build next):
+<div align="center">
 
-- **No token refresh / revocation** — JWTs expire after 7 days; add refresh tokens for a real deployment.
-- **Timer is in-memory** — a mid-session page reload loses the running clock; would persist to `localStorage`.
-- **No rate limiting** — add `express-rate-limit` on `/auth` before public exposure.
-- **Simple ML by design** — one decision tree per request; adjacent hours share predictions. A larger dataset would justify a richer model and a stored/versioned artifact.
-- **No pagination** — `/sessions` returns all rows (fine for personal scale, unbounded in theory).
+Built by **[Sneh Shah](https://github.com/Sneh-0)** — a full-stack portfolio project.
+
+Contributions, issues, and feature requests are welcome!
+
+</div>
+
+---
+
+## 📄 License
+
+Released under the **MIT License** — free to use, modify, and distribute.
 
 ---
 
